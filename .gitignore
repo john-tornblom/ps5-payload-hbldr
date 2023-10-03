@@ -1,0 +1,5 @@
+*~
+*.elf
+*.o
+test_elf.c
+
