@@ -1,2 +1,4 @@
 # Homebrew BigApp loader for PS5
-TODO.
+WIP, got some stack memory corruption going on.
+Payload works on 3.21, but changing CFLAGS to -O2 or moving stack
+variables around causes issues. Feedback is appreciated.
