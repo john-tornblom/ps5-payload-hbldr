@@ -18,11 +18,11 @@ along with this program; see the file COPYING. If not, see
 #include <stdlib.h>
 
 #include "hbldr.h"
+#include "test_elf.c"
 
 
 int sceUserServiceInitialize(void*);
 int sceUserServiceTerminate(void);
-int sceKernelSetProcessName(const char*);
 
 
 __attribute__((constructor)) static void
@@ -38,8 +38,6 @@ destructor(void) {
   sceUserServiceTerminate();
 }
 
-
-#include "test_elf.c"
 
 int
 main() {

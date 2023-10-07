@@ -27,7 +27,7 @@ CC  := $(PS5_PAYLOAD_SDK)/host/x86_64-ps5-payload-cc
 LD  := $(PS5_PAYLOAD_SDK)/host/x86_64-ps5-payload-ld
 XXD := xxd
 
-CFLAGS := -std=gnu11 -Wall
+CFLAGS := -O0 -Wall
 LDADD  := -lkernel -lSceLibcInternal -lSceSystemService -lSceUserService
 
 all: $(ELF)
@@ -38,7 +38,7 @@ test_elf.c: test.elf
 	$(XXD) -i $^ > $@
 
 test.elf: test.o
-	$(LD) -o $@ $^ -lkernel -lSceLibcInternal
+	$(LD) -o $@ $^ -lkernel -lSceLibcInternal -lSceVideoOut -lSceSystemService
 
 %.o: %.c
 	$(CC) -c $(CFLAGS) -o $@ $<

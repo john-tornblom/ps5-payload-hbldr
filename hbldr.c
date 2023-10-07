@@ -609,13 +609,12 @@ hbldr_exec(pid_t pid, int stdout, uint8_t *elf, size_t size) {
   }
 
   r.r_rip = entry;
-  r.r_rdi = args; //kernel_dynlib_resolve(pid, 0x2001, "LwG8g3niqwA");
+  r.r_rdi = args;
   if(pt_setregs(pid, &r)) {
     perror("[hbldr.elf] pt_setregs");
     return -1;
   }
 
-  
   if(pt_detach(pid)) {
     perror("[hbldr.elf] pt_detach");
     return -1;
@@ -631,7 +630,6 @@ hbldr_launch_thread(void* args) {
   const char* argv[] = {0};
 
   sceSystemServiceLaunchApp("PPSA01325", argv, ctx);
-  //sceSystemServiceLaunchApp("CUSA05716", argv, ctx);
   
   return 0;
 }
@@ -689,7 +687,6 @@ hbldr_attach_to_bigapp(uint32_t user_id) {
 }
 
 
-
 int
 hbldr_launch(int stdout, uint8_t *elf, size_t size) {
   int32_t int3instr = 0xCCCCCCCCL;
@@ -711,9 +708,7 @@ hbldr_launch(int stdout, uint8_t *elf, size_t size) {
     pt_detach(pid);
     return -1;
   }
-  printf("entry = %lx\n", brkpoint);
-  printf("entry = %lx\n", kernel_dynlib_entry_addr(pid, 0x2001));
-  
+
   if(mdbg_copyin(pid, &int3instr, brkpoint, sizeof(int3instr))) {
     return -1;
   }
@@ -728,99 +723,12 @@ hbldr_launch(int stdout, uint8_t *elf, size_t size) {
     return -1;
   }
 
+  printf("entry: 0x%lx\n", brkpoint);
   if(hbldr_exec(pid, stdout, elf, size)) {
     pt_detach(pid);
     return -1;
   }
   
-  return 0;
-}
-
-
-/**
- * Read an ELF from a given socket connection.
- **/
-static ssize_t
-hbldr_read(int connfd, uint8_t **data) {
-  uint8_t buf[0x4000];
-  off_t offset = 0;
-  ssize_t len;
-
-  *data = 0;
-  while((len=read(connfd, buf, sizeof(buf)))) {
-    *data = realloc(*data, offset + len);
-    if(*data == 0) {
-      perror("[hbldr.elf] realloc");
-      return -1;
-    }
-
-    memcpy(*data + offset, buf, len);
-    offset += len;
-  }
-
-  return offset;
-}
-
-
-/**
- *
- **/
-int
-hbldr_serve(uint16_t port) {
-  struct sockaddr_in server_addr;
-  struct sockaddr_in client_addr;
-  socklen_t addr_len;
-
-  uint8_t *elf;
-  size_t size;
-
-  int connfd;
-  int srvfd;
-
-  if((srvfd=socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-    perror("[hbldr.elf] socket");
-    return -1;
-  }
-
-  if(setsockopt(srvfd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0) {
-    perror("[hbldr.elf] setsockopt");
-    close(srvfd);
-    return -1;
-  }
-
-  memset(&server_addr, 0, sizeof(server_addr));
-  server_addr.sin_family = AF_INET;
-  server_addr.sin_port = htons(port);
-
-  if(bind(srvfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) != 0) {
-    perror("[hbldr.elf] bind");
-    close(srvfd);
-    return -1;
-  }
-
-  if(listen(srvfd, 5) != 0) {
-    perror("[hbldr.elf] listen");
-    close(srvfd);
-    return -1;
-  }
-
-  puts("[hbldr.elf] waiting for payload");
-  addr_len = sizeof(client_addr);
-  if((connfd=accept(srvfd, (struct sockaddr *)&client_addr, &addr_len)) < 0) {
-    perror("[hbldr.elf] accept");
-    close(srvfd);
-    return -1;
-  }
-
-  if((size=hbldr_read(connfd, &elf))) {
-    puts("[hbldr.elf] launching homebrew");
-    hbldr_launch(connfd, elf, size);
-    free(elf);
-  }
-
-  close(connfd);
-  close(srvfd);
-
   return 0;
 }
 
