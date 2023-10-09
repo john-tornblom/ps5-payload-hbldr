@@ -67,10 +67,10 @@ typedef struct app_launch_ctx {
 
 
 int sceUserServiceGetForegroundUser(uint32_t *user_id);
+int sceSystemServiceGetAppIdOfRunningBigApp(void);
+int sceSystemServiceKillApp(int app_id, int how, int reason, int core_dump);
 int sceSystemServiceLaunchApp(const char* title_id, const char** argv,
 			      app_launch_ctx_t* ctx);
-
-
 
 
 intptr_t
@@ -692,6 +692,7 @@ hbldr_launch(int stdout, uint8_t *elf, size_t size) {
   int32_t int3instr = 0xCCCCCCCCL;
   intptr_t brkpoint;
   uint32_t user_id;
+  int app_id;
   pid_t pid;
 
   if(sceUserServiceGetForegroundUser(&user_id)) {
@@ -699,8 +700,13 @@ hbldr_launch(int stdout, uint8_t *elf, size_t size) {
     return -1;
   }
 
-  //TODO: check if bigapp is running and kill it
-  if((pid=hbldr_attach_to_bigapp(user_id)) < 0) {
+  if((app_id=sceSystemServiceGetAppIdOfRunningBigApp()) > 0) {
+    if(sceSystemServiceKillApp(app_id, -1, 0, 0)) {
+      perror("sceSystemServiceKillApp");
+      return -1;
+    }
+  }
+
     return -1;
   }
 
