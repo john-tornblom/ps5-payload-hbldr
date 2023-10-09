@@ -160,7 +160,7 @@ rainbow_render(void) {
   }
 
   if(sceVideoOutGetOutputStatus(vout, &vstat)) {
-    kerror("sceVideoOutGetResolutionStatus");
+    kerror("sceVideoOutGetOutputStatus");
     return -1;
   }
 
