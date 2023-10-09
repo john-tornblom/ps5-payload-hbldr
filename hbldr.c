@@ -624,66 +624,43 @@ hbldr_exec(pid_t pid, int stdout, uint8_t *elf, size_t size) {
 }
 
 
-static void*
-hbldr_launch_thread(void* args) {
-  app_launch_ctx_t *ctx  = (app_launch_ctx_t *)args;
-  const char* argv[] = {0};
-
-  sceSystemServiceLaunchApp("PPSA01325", argv, ctx);
-  
-  return 0;
-}
-
-
 static pid_t
-hbldr_attach_to_bigapp(uint32_t user_id) {
+hbldr_launch_bigapp(uint32_t user_id) {
   app_launch_ctx_t ctx = {.user_id = user_id};
-  pid_t parent = getppid();
-  pid_t child = 0;
-  pthread_t trd;
+  const char* argv[] = {0};
+  struct kevent evt;
+  pid_t pid = -1;
+  int kq;
 
-  if(pt_attach(parent) < 0) {
+  if((kq=kqueue()) < 0) {
+    perror("[hbldr.elf] kqueue");
     return -1;
   }
 
-  if(pt_follow_fork(parent) < 0) {
-    pt_detach(parent);
+  EV_SET(&evt, getppid(), EVFILT_PROC, EV_ADD, NOTE_FORK | NOTE_TRACK, 0, NULL);
+  if(kevent(kq, &evt, 1, NULL, 0, NULL) < 0) {
+    perror("[hbldr.elf] kevent");
+    close(kq);
     return -1;
   }
 
-  if(pt_continue(parent) < 0) {
-    pt_detach(parent);
-    return -1;
+  sceSystemServiceLaunchApp("PPSA01325", argv, &ctx);
+
+  while(1) {
+    if(kevent(kq, NULL, 0, &evt, 1, NULL) < 0) {
+      perror("[hbldr.elf] kevent");
+      break;
+    }
+
+    if(evt.fflags & NOTE_CHILD) {
+      pid = evt.ident;
+      break;
+    }
   }
 
-  pthread_create(&trd, 0, &hbldr_launch_thread, &ctx);
-  if((child=pt_await_child(parent)) < 0) {
-    pt_detach(parent);
-    return -1;
-  }
+  close(kq);
 
-  if(pt_detach(parent) < 0) {
-    return -1;
-  }
-
-  if(pt_follow_exec(child) < 0) {
-    pt_detach(child);
-    return -1;
-  }
-
-  if(pt_continue(child) < 0) {
-    pt_detach(child);
-    return -1;
-  }
-
-  if(pt_await_exec(child)) {
-    pt_detach(child);
-    return -1;
-  }
-
-  pthread_join(trd, 0);
-
-  return child;
+  return pid;
 }
 
 
@@ -707,6 +684,11 @@ hbldr_launch(int stdout, uint8_t *elf, size_t size) {
     }
   }
 
+  if((pid=hbldr_launch_bigapp(user_id)) < 0) {
+    return -1;
+  }
+
+  if(pt_attach(pid) < 0) {
     return -1;
   }
 
