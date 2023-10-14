@@ -666,7 +666,7 @@ hbldr_launch_bigapp(uint32_t user_id) {
 
 int
 hbldr_launch(int stdout, uint8_t *elf, size_t size) {
-  int32_t int3instr = 0xCCCCCCCCL;
+  uint8_t int3instr = 0xcc;
   intptr_t brkpoint;
   uint32_t user_id;
   int app_id;

@@ -225,5 +225,5 @@ rainbow_render(void) {
 int
 main() {
   sceSystemServiceHideSplashScreen();
-  rainbow_render();
+  return rainbow_render();
 }
