@@ -137,7 +137,7 @@ pt_await_child(pid_t pid) {
   memset(&lwpinfo, 0, sizeof(lwpinfo));
   while(!(lwpinfo.pl_flags & PL_FLAG_FORKED)) {
     if(waitpid(pid, NULL, 0) == -1) {
-      perror("[hbldr.elf] waitid");
+      perror("[hbldr.elf] waitpid");
       return -1;
     }
 
@@ -163,7 +163,7 @@ pt_await_exec(pid_t pid) {
   memset(&lwpinfo, 0, sizeof(lwpinfo));
   while(!(lwpinfo.pl_flags & PL_FLAG_EXEC)) {
     if(waitpid(pid, NULL, 0) == -1) {
-      perror("[hbldr.elf] waitid");
+      perror("[hbldr.elf] waitpid");
       return -1;
     }
 
